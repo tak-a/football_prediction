@@ -4,6 +4,8 @@ import os
 
 website = 'https://www.lequipe.fr'
 
+
+# ----- project paths -----
 script_path = os.path.dirname(os.path.abspath(__file__))
 
 project_path = script_path + '/..'
@@ -11,13 +13,38 @@ project_path = script_path + '/..'
 data_path = project_path + '/Data'
 
 
+# ----- So FIFA webiste info ----
 sofifa_player_search = 'https://sofifa.com/players?keyword='
 
-composed_teams_names = ['Paris-Saint-Germain', 'Saint-Etienne', 'Manchester-United', 'Manchester-City']
+so_fifa = 'https://sofifa.com'
 
-so_fifa_url = 'https://sofifa.com'
 
 so_fifa_players = 'https://sofifa.com/players/?showCol%5B0%5D=oa&col=oa&sort=desc&offset='
+
+so_fifa_top5_21 = 'https://sofifa.com/players?type=all&lg%5B0%5D=13&lg%5B1%5D=16&lg%5B2%5D=19&lg%5B3%5D=31&lg' \
+                  '%5B4%5D=53&showCol%5B%5D=ae&showCol%5B%5D=oa&showCol%5B%5D=pi&offset='
+
+so_fifa_top5_20 = 'https://sofifa.com/players?type=all&lg%5B0%5D=13&lg%5B1%5D=16&lg%5B2%5D=19&lg%5B3%5D=31&lg' \
+                  '%5B4%5D=53&showCol%5B0%5D=ae&showCol%5B1%5D=oa&showCol%5B2%5D=pi&r=200061&set=true&offset='
+
+so_fifa_top5_19 = 'https://sofifa.com/players?type=all&lg%5B0%5D=13&lg%5B1%5D=16&lg%5B2%5D=19&lg%5B3%5D=31&lg' \
+                  '%5B4%5D=53&showCol%5B0%5D=ae&showCol%5B1%5D=oa&showCol%5B2%5D=pi&r=190075&set=true&offset='
+
+so_fifa_top5_18 = 'https://sofifa.com/players?type=all&lg%5B0%5D=13&lg%5B1%5D=16&lg%5B2%5D=19&lg%5B3%5D=31&lg' \
+                  '%5B4%5D=53&showCol%5B0%5D=ae&showCol%5B1%5D=oa&showCol%5B2%5D=pi&r=180084&set=true&offset='
+
+so_fifa_top5_17 = 'https://sofifa.com/players?type=all&lg%5B0%5D=13&lg%5B1%5D=16&lg%5B2%5D=19&lg%5B3%5D=31&lg' \
+                  '%5B4%5D=53&showCol%5B0%5D=ae&showCol%5B1%5D=oa&showCol%5B2%5D=pi&r=170099&set=true&offset='
+
+so_fifa_top5_16 = 'https://sofifa.com/players?type=all&lg%5B0%5D=13&lg%5B1%5D=16&lg%5B2%5D=19&lg%5B3%5D=31&lg' \
+                  '%5B4%5D=53&showCol%5B0%5D=ae&showCol%5B1%5D=oa&showCol%5B2%5D=pi&r=160058&set=true&offset='
+
+so_fifa_top5_15 = 'https://sofifa.com/players?type=all&lg%5B0%5D=13&lg%5B1%5D=16&lg%5B2%5D=19&lg%5B3%5D=31&lg' \
+                  '%5B4%5D=53&showCol%5B0%5D=ae&showCol%5B1%5D=oa&showCol%5B2%5D=pi&r=150059&set=true&offset='
+
+so_fifa_top5_urls = [so_fifa_top5_21, so_fifa_top5_20, so_fifa_top5_19, so_fifa_top5_18, so_fifa_top5_17,
+                     so_fifa_top5_16, so_fifa_top5_15]
+
 
 # player's name, Club's name, delimiter
 players_dataset_infos = {
@@ -27,8 +54,14 @@ players_dataset_infos = {
     '2021': ['name', 'team', 'overall', ';']
 }
 
+
+composed_teams_names = ['Paris-Saint-Germain', 'Saint-Etienne', 'Manchester-United', 'Manchester-City']
+
 teams_names_exceptions = [
     ['PSG', 'Paris Saint Germain', 'Paris SG', 'Paris-Saint-Germain']
 ]
 
 players_career_columns = ['Name', 'ID', '2015', '2016', '2017', '2018', '2019', '2020', '2021']
+
+
+career_file = os.path.join(data_path, 'players_career.csv')
