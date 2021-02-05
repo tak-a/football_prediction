@@ -1,26 +1,28 @@
 # Created by taka the 2021-01-18 at 16:55
 
 import re
-import requests
-from bs4 import BeautifulSoup
+import processing_utils as proc
 import pandas as pd
 import config as cfg
 import unidecode
 
 
-# return html text from the url
-def extract_from_url(url):
-    url_text = requests.get(url).text
-    return BeautifulSoup(url_text, 'html.parser')
-
-
-# get all the matches url
 def get_matchs_url(page):
+    """
+    Get the links of the matches from the page text
+    :param page: BS4 element, html code of the page
+    :return: list, matches' links
+    """
     matches = page.find_all(href=re.compile('match-direct'))
     return [str(m.get("href")) for m in matches]
 
 
 def get_teams_names(match_id):
+    """
+    get the names of both teams of the match
+    :param match_id: string, contains names of the teams
+    :return:tuple, the 2 names separated
+    """
     splitted = match_id.split('-')
     if match_id.count('-') == 1:  # classic team names
         return tuple(splitted)
@@ -33,114 +35,136 @@ def get_teams_names(match_id):
         return '-'.join(splitted[:2]), '-'.join(splitted[2:])
 
 
-# get team composition for a specific match
-# return :
-# - match_id : name of both team ('team1-team2)
-# - players : the 22 starting players
 def get_comp_match(match_url):
+    """
+    get both teams composition for a specific match
+    :param match_url:string, url of the match
+    :return:tuple, ("team1-team2",[22 starting players of the match])
+    """
     match_id = match_url.split('/')[-2]
-    match_id = match_id.split('-')[:-1]
-    match_id = ('-').join(match_id)
-    soup = extract_from_url(cfg.website + match_url + '/compositions')
+    match_id = match_id[:-5]
+    soup_comp = proc.extract_from_url(cfg.lequipe + match_url + '/compositions')
 
-    players = soup.find_all('span', {'class': 'fieldPlayer__title'})
+    players = soup_comp.find_all('span', {'class': 'fieldPlayer__title'})
     if not players:  # if empty list => means different method to show comp on website
-        players = soup.find_all('a', {'class': 'link'})
+        players = soup_comp.find_all('a', {'class': 'link'})
 
     players = [p.get_text().strip() for p in players]
 
     return match_id, players
 
 
-# return all the matches team composition from one day
-def get_comps_day(day_matches_url, year):
+def get_match_date(match_url):
+    """
+    get the year of the match
+    :param match_url:
+    :return:
+    """
+    match_soup = proc.extract_from_url(cfg.lequipe + match_url)
+    match_header = match_soup.find("h1", {"class": "heading heading--1"})
+    m_date = match_header.get_text().split()[-3:]
+    m_date = m_date[0] + '/' + str(cfg.years.index(m_date[1])).zfill(2) + '/' + m_date[2]
+
+    return m_date
+
+
+def get_comps_day(day_matches_url):
+    """
+    return all the matches team composition from one day of the season
+    :param day_matches_url: list, urls of all the matches for the day
+    :return: tuple, (dictionnary => {'match_id': [match_comp], list => matches dates)
+    """
     dic_matches_comp = {}
-
+    matches_dates = []
     for m_url in day_matches_url:
+        match_date = get_match_date(m_url)
+        matches_dates.append(match_date)
         mid, players = get_comp_match(m_url)
-        players = match_players_id(mid, players, year)
+        players = match_players_ids(mid, players, match_date[-4:])
         dic_matches_comp[mid] = players
+        print('Composition of match {} collected.'.format(mid))
 
-    return dic_matches_comp
+    return dic_matches_comp, matches_dates
 
 
-def match_players_id(m_id,players, year):
-    teamA, teamB = get_teams_names(m_id)
-    n_players = [get_player_id(p, teamA, year) if i < 11 else get_player_id(p, teamB, year)
-                 for i, p in enumerate(players)]
+def match_players_ids(match_id, players, year):
+    """
+    for a specific match, fetch the 22 starting players id
+    :param match_id: string, the names of the teams
+    :param players: list, names of the 22 starting players
+    :param year: string, year of the match
+    :return: list, containing th ids of the 22 starting player
+    """
+    team_a, team_b = get_teams_names(match_id)
+    career_df = pd.read_csv(cfg.career_top5_file, sep=',')
+    comps_ids = []
 
-    return n_players
+    for i, p in enumerate(players):
+        p_name = check_player_name(p)
+
+        if i < 11:
+            club = team_a
+        else:
+            club = team_b
+
+        if club == 'paris-sg':
+            club = 'psg'
+
+        matching_row = career_df[(career_df[year].str.contains("(?i)" + club) &
+                                  unidecode.unidecode(career_df['Name'].str).contains("(?i)" +
+                                                                                      unidecode.unidecode(p_name)))]
+
+        if matching_row.shape[0] != 1:
+            comps_ids.append('N/A')
+        else:
+            comps_ids.append(matching_row['ID'].iloc[0])
+
+    return comps_ids
 
 
 def check_player_name(player):
-    splitted = player.split(". ")
-    if len(splitted) > 1:
-        return splitted[-1]
+    """
+    If the variable player doesn't contain only the lastname (ex : L. Messi)
+    remove the start to keep only the lastname
+    :param player: string, name of the player
+    :return: the lastname only of the player
+    """
+    name = player.split(". ")
+    if len(name) == 1:
+        return name[0]
     else:
-        return player
-
-
-def get_player_id(player, club, year, nextyear = False):
-    p_name = check_player_name(player)
-    players_dataset = 'players_' + year[-2:] + '.csv'
-    dt_infos = cfg.players_dataset_infos[year]
-    df = pd.read_csv('../Data/' + players_dataset, delimiter=dt_infos[-1])
-    if club == 'paris-sg':
-        club = 'psg'
-    print(p_name, club)
-    df[dt_infos[0]] = df[dt_infos[0]].apply(unidecode.unidecode)
-    player_row = df[((df[dt_infos[0]].str.contains("(?i)"+unidecode.unidecode(p_name))) &
-                    (df[dt_infos[1]].str.contains("(?i)"+club)))]
-    print(player_row['ID'], 'pouet')
-    if len(player_row) != 1:
-        if not nextyear:
-            nextyear_res = get_player_id(player, club, str(int(year)+1), True)
-
-        if nextyear or nextyear_res == 'N/A':
-            return 'N/A'
-
-    else:
-        return int(player_row['ID'])
-
-
-def get_player_id_sofifa(player, club, year):
-    player = check_player_name(player)
-    sofifa = cfg.sofifa_player_search
-    sofifa += player
-    sf_soup = extract_from_url(sofifa)
-    print(sf_soup)
-    #sf_text.find_all(href=re.compile('match-direct'))
-    mydivs = sf_soup.findAll("tbody", {"class": "list"})
-    print("Pouet \n\n",mydivs)
+        return " ".join(name[1:])
 
 
 if __name__ == "__main__":
 
-    get_player_id_sofifa("Messi", "Barcelone", 2018)
-    exit(1)
-
-    for i in range(2017, 2019):
-        url = cfg.website + '/Football/ligue-1/saison-' + str(i) + '-' + str(i+1) + '/page-calendrier-resultats/'
-        col = ['Day', 'Team A', 'Team B']
-        col.extend([str('T' + j + ' player ' + str(i)) for j in ['A', 'B'] for i in range(1, 12)])
+    for i in range(2017, 2018):
+        url = cfg.ligue1_season_calendar.format(i, i+1)
+        col = ['Day', 'Date', 'Team A', 'Team B']
+        col.extend(["T{} player {}".format(j, i) for j in ['A', 'B'] for i in range(1, 12)])
         df = pd.DataFrame(columns=col)
 
-        for j in range(1,39):
+        for j in range(1, 39):
             if j == 1:
                 day = '1ere-journee'
             else:
-                day = str(j) +'e-journee'
+                day = str(j) + 'e-journee'
 
-            soup = extract_from_url(url + day)
+            print(day)
+            soup = proc.extract_from_url(url + day)
 
             matches_url = get_matchs_url(soup)
-            comps = get_comps_day(matches_url, str(i+1))
-            # add each match to the dataframe with
-            for k, m_id in enumerate(comps):
-                row = [j] + list(get_teams_names(m_id)) + comps[m_id]
-                #print(row)
+            comps, m_dates = get_comps_day(matches_url)
+
+            # add each match to the DataFrame with
+            for k, (player_id, date) in enumerate(zip(comps, m_dates)):
+                row = [j] + [date] + list(get_teams_names(player_id)) + comps[player_id]
                 df.loc[(j-1)*10 + k] = row
 
-        df.to_csv('../Data/test_comps_' + str(i)+ '_' + str(i+1) + '.csv',sep=';', encoding='utf-8', index=False)
+            # break
+
+            print("Previous compositions added to the DataFrame. \n")
+
+        df.to_csv(cfg.data_path + "/test_comps_ids_{}_{}.csv".format(i, i+1), sep=';', encoding='utf-8', index=False)
 
         print(str(i) + '_' + str(i+1) + ' csv created.')
