@@ -2,19 +2,25 @@
 
 import os
 
-website = 'https://www.lequipe.fr'
+
+# ----- lequipe website info -----
+lequipe = 'https://www.lequipe.fr'
+ligue1_season_calendar = os.path.join(lequipe, "Football/ligue-1/saison-{}-{}/page-calendrier-resultats/")
+
+years = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet',
+         'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre']
 
 
 # ----- project paths -----
-script_path = os.path.dirname(os.path.abspath(__file__))
+scripts_path = os.path.dirname(os.path.abspath(__file__))
 
-project_path = script_path + '/..'
+project_path = scripts_path + '/..'
 
 data_path = project_path + '/Data'
 
 
-# ----- So FIFA webiste info ----
-sofifa_player_search = 'https://sofifa.com/players?keyword='
+# ----- So FIFA website info ----
+so_fifa_player_search = 'https://sofifa.com/players?keyword='
 
 so_fifa = 'https://sofifa.com'
 
@@ -47,7 +53,7 @@ so_fifa_top5_urls = [so_fifa_top5_21, so_fifa_top5_20, so_fifa_top5_19, so_fifa_
 
 
 # player's name, Club's name, delimiter
-players_dataset_infos = {
+players_dataset_info = {
     '2018': ['Name', 'Club','Overall', ','],
     '2019': ['Name', 'Club', 'Overall', ','],
     '2020': ['short_name', 'Club', 'Overall', ','],
@@ -64,4 +70,4 @@ teams_names_exceptions = [
 players_career_columns = ['Name', 'ID', '2015', '2016', '2017', '2018', '2019', '2020', '2021']
 
 
-career_file = os.path.join(data_path, 'players_career.csv')
+career_top5_file = os.path.join(data_path, 'players_career_top5_complete.csv')

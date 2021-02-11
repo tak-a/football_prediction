@@ -48,8 +48,10 @@ def get_comp_match(match_url):
     players = soup_comp.find_all('span', {'class': 'fieldPlayer__title'})
     if not players:  # if empty list => means different method to show comp on website
         players = soup_comp.find_all('a', {'class': 'link'})
-
-    players = [p.get_text().strip() for p in players]
+        players = [p.get_text().strip() for p in players]
+        players = players[0::2] + players[1::2]
+    else:
+        players = [p.get_text().strip() for p in players]
 
     return match_id, players
 
@@ -87,6 +89,52 @@ def get_comps_day(day_matches_url):
     return dic_matches_comp, matches_dates
 
 
+def matching_club_name(career_df, club, name, year):
+    player_name = name.replace('-', ' ')
+    player_name = unidecode.unidecode(player_name).strip()
+
+    #exception
+    if player_name == 'M. Diaz' and club == 'lyon':
+        player_name = 'Mariano'
+    elif player_name == 'B. Llamas' and club == 'rennes':
+        player_name = 'Brandon Thomas'
+    elif player_name == 'M. Santos' and club == 'nice':
+        player_name = 'Marlon'
+    elif player_name == 'V. Dias Goncalves' and club == 'saint-etienne':
+        player_name = 'Vagner'
+    elif player_name == 'D. Barbosa' and club == 'nice':
+        player_name = 'Danilo'
+    elif player_name == 'A. Golovine' and club == 'monaco':
+        player_name = 'A. Golovin'
+    elif player_name == 'S. Mbia' and club == 'toulouse':
+        player_name = 'S. M\'bia'
+    elif player_name == "N. N\'goumou Minpol" and club == "toulouse":
+        player_name = 'N. Ngoumou'
+    elif player_name == 'R. Mandava' and club == "lille":
+        player_name = 'Reinildo'
+
+    matching_row = career_df[(career_df[year].str.contains("(?i)" + club) &
+                              career_df['Name'].str.contains("(?i)" + '|'.join([player_name, name])))]
+
+    if len(matching_row) == 1:
+        return matching_row
+
+    for n in player_name.split():
+        if '.' in n:
+            continue
+        matching_row = career_df[(career_df[year].str.contains("(?i)" + club) &
+                                  career_df['Name'].str.contains("(?i)" + n))]
+
+        if len(matching_row) > 1 and '.' in player_name:
+            matching_row = matching_row[(matching_row[year].str.contains("(?i)" + club) &
+                                         matching_row['Name'].str[0].str.contains("(?i)" + player_name[0]))]
+
+        if len(matching_row) == 1:
+            return matching_row
+
+    return matching_row
+
+
 def match_players_ids(match_id, players, year):
     """
     for a specific match, fetch the 22 starting players id
@@ -96,11 +144,11 @@ def match_players_ids(match_id, players, year):
     :return: list, containing th ids of the 22 starting player
     """
     team_a, team_b = get_teams_names(match_id)
-    career_df = pd.read_csv(cfg.career_top5_file, sep=',')
+    career_df = pd.read_csv(cfg.career_top5_file, sep=';', encoding='utf-8')
     comps_ids = []
 
     for i, p in enumerate(players):
-        p_name = check_player_name(p)
+        p_name = p
 
         if i < 11:
             club = team_a
@@ -109,13 +157,19 @@ def match_players_ids(match_id, players, year):
 
         if club == 'paris-sg':
             club = 'psg'
+        elif club == 'asse':
+            club = 'saint-etienne'
+        elif club == 'om':
+            club = 'marseille'
+        elif club == 'ol':
+            club = 'lyon'
 
-        matching_row = career_df[(career_df[year].str.contains("(?i)" + club) &
-                                  unidecode.unidecode(career_df['Name'].str).contains("(?i)" +
-                                                                                      unidecode.unidecode(p_name)))]
+        matching_row = matching_club_name(career_df, club, p_name, year)
 
         if matching_row.shape[0] != 1:
-            comps_ids.append('N/A')
+            print(p_name + ' not found in career csv. Club : ' + club + '.')
+            print(matching_row)
+            comps_ids.append(p_name)
         else:
             comps_ids.append(matching_row['ID'].iloc[0])
 
@@ -138,7 +192,7 @@ def check_player_name(player):
 
 if __name__ == "__main__":
 
-    for i in range(2017, 2018):
+    for i in range(2018, 2019):
         url = cfg.ligue1_season_calendar.format(i, i+1)
         col = ['Day', 'Date', 'Team A', 'Team B']
         col.extend(["T{} player {}".format(j, i) for j in ['A', 'B'] for i in range(1, 12)])
@@ -165,6 +219,6 @@ if __name__ == "__main__":
 
             print("Previous compositions added to the DataFrame. \n")
 
-        df.to_csv(cfg.data_path + "/test_comps_ids_{}_{}.csv".format(i, i+1), sep=';', encoding='utf-8', index=False)
+        df.to_csv(cfg.data_path + "/test_comps_ids_{}_{}.csv".format(i, i+1), sep=',', encoding='utf-8', index=False)
 
         print(str(i) + '_' + str(i+1) + ' csv created.')

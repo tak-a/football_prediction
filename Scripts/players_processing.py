@@ -10,29 +10,24 @@ It's then stocked in a csv named "players_career_top5.csv"
 """
 
 import config as cfg
-from Scripts import processing_utils as proc
+import processing_utils as proc
 import pandas as pd
 from unidecode import unidecode
 
 
-def player_transfers(url_transfers):
+def player_transfers(transfers_data):
     """
     from the url of the player's info,
     get the his transfer info,
     with the year, the club he left and joined
 
-    :param url_transfers: link of the player's webpage
+    :param transfers_data: transfers info of the player
     :return: dictionary, with all his transfer as the following form:
              {year:[from_team, to_team]
     """
-    soup = proc.extract_from_url(url_transfers)
     dic_transfers = {}
-    transfers = soup.find('table', {"class": 'real-transfers'})
 
-    if transfers is None or transfers == []:
-        return dic_transfers
-    else:
-        transfers = transfers.find_all('tr', {"class": ["odd", "even"]})
+    transfers = transfers_data.find_all('tr', {"class": ["odd", "even"]})
 
     for tr in transfers[::-1]:
         date = tr.find('td', {"class": 'date'}).get_text()
@@ -52,7 +47,7 @@ def player_transfers(url_transfers):
 
 def player_info(url_info, col):
     """
-    fromthe url info, get all the desired information concerning the player
+    from the url info, get all the desired information concerning the player
     :param url_info: link of the player's webpage
     :param col: columns of the DataFrame representing the information that we want to collect
     :return: dictionary,  with all the wanted information of the player
@@ -70,18 +65,31 @@ def player_info(url_info, col):
     teams = soup.find_all('td', {"class": 'team'})
     teams = [unidecode(t.find('a').get('title')) for t in teams]
 
-    transfers = player_transfers(url_info)
+    if not teams:
+        print('(No career info found for ' + str(dic_seasons['Name']) + '.)')
+        for s in col:
+            if s.isdigit():
+                dic_seasons[s].append('N/A')
+
+    transfers_info = soup.find('table', {"class": 'real-transfers'})
+
+    if transfers_info is None or transfers_info == []:
+        transfers = {}
+    else:
+        transfers = player_transfers(transfers_info)
+
+    # print('transfers : \n', transfers)
 
     for s, t in zip(seasons, teams):
-
+        # print('saison :', s.get_text())
+        # print('teams :', t, '\n')
         for season in str(s.get_text()).split('/'):
 
-            if season in col and t not in dic_seasons[season]:
-                if (str(int(season)-1) in transfers and transfers[str(int(season)-1)][1] == t) or \
-                        not (str(int(season) - 1) in transfers and transfers[str(int(season) - 1)][0] == t):
+            if season in col and t not in dic_seasons[season] and 'II' not in t:
+                if (season in transfers and transfers[season][1] == t)or \
+                        (season in transfers and transfers[season][0] == t) or \
+                        not (str(int(season) - 1) in transfers and t in transfers[str(int(season) - 1)][0]):
                     dic_seasons[season].append(t)
-
-
 
     print(str(dic_seasons['Name']) + ' career dictionary created.')
 
@@ -131,12 +139,7 @@ def players_career_top5(url_info, collected_ids=[]):
                 link += "/live"
                 p_career = player_info((cfg.so_fifa + link), list(players_df.columns))
 
-                if all(not p_career[s] for s in list(players_df.columns)if s.isdigit()):
-                    players_df = players_df.append({**p_career,
-                                                    **{s: 'N/A' for s in list(players_df.columns) if s.isdigit()}},
-                                                   ignore_index=True)
-                else:
-                    players_df = players_df.append(p_career, ignore_index=True)
+                players_df = players_df.append(p_career, ignore_index=True)
 
         if not is_there_next(soup):
             still_players = False
@@ -152,6 +155,11 @@ def players_career_top5(url_info, collected_ids=[]):
 
 if __name__ == "__main__":
 
+    # rlopes = 'https://sofifa.com/player/212692/marcos-paulo-mesquita-lopes/live'
+    # diclopes = player_info(rlopes, cfg.players_career_columns)
+    # print(diclopes)
+    # exit(1)
+
     ids = []
     final_df = pd.DataFrame(columns=cfg.players_career_columns)
 
@@ -161,6 +169,6 @@ if __name__ == "__main__":
         ids = ids + list(df["ID"])
         final_df = final_df.append(df, ignore_index=True)
 
-    final_df.to_csv(cfg.data_path + '/players_career_top5.csv', sep=',', encoding='utf-8', index=False)
+    final_df.to_csv(cfg.data_path + '/players_career_top5_TEST.csv', sep=';', encoding='utf-8', index=False)
 
     print('Player career csv saved.')
