@@ -65,7 +65,7 @@ def get_match_date(match_url):
     match_soup = proc.extract_from_url(cfg.lequipe + match_url)
     match_header = match_soup.find("h1", {"class": "heading heading--1"})
     m_date = match_header.get_text().split()[-3:]
-    m_date = m_date[0] + '/' + str(cfg.years.index(m_date[1])).zfill(2) + '/' + m_date[2]
+    m_date = m_date[0] + '/' + str(cfg.years.index(m_date[1])+1).zfill(2) + '/' + m_date[2]
 
     return m_date
 
@@ -192,7 +192,7 @@ def check_player_name(player):
 
 if __name__ == "__main__":
 
-    for i in range(2018, 2019):
+    for i in range(2017, 2018):
         url = cfg.ligue1_season_calendar.format(i, i+1)
         col = ['Day', 'Date', 'Team A', 'Team B']
         col.extend(["T{} player {}".format(j, i) for j in ['A', 'B'] for i in range(1, 12)])

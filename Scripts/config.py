@@ -18,6 +18,8 @@ project_path = scripts_path + '/..'
 
 data_path = project_path + '/Data'
 
+log_path = os.path.join(project_path, 'Logs')
+
 
 # ----- So FIFA website info ----
 so_fifa_player_search = 'https://sofifa.com/players?keyword='
@@ -52,12 +54,13 @@ so_fifa_top5_urls = [so_fifa_top5_21, so_fifa_top5_20, so_fifa_top5_19, so_fifa_
                      so_fifa_top5_16, so_fifa_top5_15]
 
 
-# player's name, Club's name, delimiter
+# player's name, Club's name, delimiter, name of the 'ID' column
 players_dataset_info = {
-    '2018': ['Name', 'Club','Overall', ','],
-    '2019': ['Name', 'Club', 'Overall', ','],
-    '2020': ['short_name', 'Club', 'Overall', ','],
-    '2021': ['name', 'team', 'overall', ';']
+    '17': ['Name', 'Club', 'Rating', ',', 'ID'],
+    '18': ['Name', 'Club', 'overall', ',', 'ID'],
+    '19': ['Name', 'Club', 'Overall', ',', 'ID'],
+    '20': ['short_name', 'Club', 'overall', ',', 'sofifa_id'],
+    '21': ['name', 'team', 'overall', ';', 'player_id']
 }
 
 
